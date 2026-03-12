@@ -1,0 +1,20 @@
+# ─────────────────────────────────────────────────────────────
+# Example variable values for OCI – Copy to terraform.tfvars
+# ─────────────────────────────────────────────────────────────
+
+# ── OCI Authentication (get from OCI Console → Profile → API Keys)
+tenancy_ocid     = "ocid1.tenancy.oc1..aaaaaaaaXXXXXXXX"
+user_ocid        = "ocid1.user.oc1..aaaaaaaaXXXXXXXX"
+fingerprint      = "aa:bb:cc:dd:ee:ff:00:11:22:33:44:55:66:77:88:99"
+private_key_path = "~/.oci/oci_api_key.pem"
+compartment_ocid = "ocid1.compartment.oc1..aaaaaaaaXXXXXXXX"
+
+# ── Region & Instance
+region             = "ap-mumbai-1"
+instance_shape     = "VM.Standard.E2.1.Micro"   # Always Free
+instance_ocpus     = 1
+instance_memory_gb = 1
+
+# ── SSH
+ssh_public_key   = "ssh-rsa AAAA...your-public-key-here..."
+allowed_ssh_cidr = "0.0.0.0/0"   # ⚠️ Restrict to your IP in production

@@ -1,0 +1,49 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build-and-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker Image
+      run: |
+        docker build -t cloud-system-monitor:latest .
+
+    - name: Run Trivy Security Scan (Table)
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'cloud-system-monitor:latest'
+        format: 'table'
+        exit-code: '0'
+        ignore-unfixed: true
+        vuln-type: 'os,library'
+        severity: 'HIGH,CRITICAL'
+
+    - name: Run Trivy Security Scan (JSON Report)
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'cloud-system-monitor:latest'
+        format: 'json'
+        output: 'trivy-report.json'
+        exit-code: '0'
+        ignore-unfixed: true
+        vuln-type: 'os,library'
+        severity: 'HIGH,CRITICAL'
+
+    - name: Upload Trivy Report Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: trivy-security-report
+        path: trivy-report.json

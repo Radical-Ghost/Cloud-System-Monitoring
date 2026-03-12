@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Cloud System Monitor – Real-time CPU, GPU, Memory, and Disk metrics dashboard.">
+    <title>Cloud System Monitor | Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* ── Reset ──────────────────────────────────────────────── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg:            #0b0d14;
+            --bg-card:       #12151f;
+            --bg-sub:        #181c28;
+            --bg-hover:      #1f2435;
+            --border:        #232840;
+            --text:          #e2e5f0;
+            --text-dim:      #6b7194;
+            --blue:          #3b82f6;
+            --cyan:          #06b6d4;
+            --purple:        #8b5cf6;
+            --rose:          #f43f5e;
+            --green:         #22c55e;
+            --amber:         #f59e0b;
+            --orange:        #f97316;
+            --radius:        16px;
+            --radius-sm:     10px;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.55;
+        }
+
+        /* ── Header ─────────────────────────────────────────────── */
+        .header {
+            background: linear-gradient(135deg, #141828 0%, #0e1019 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 1.25rem 2rem;
+            display: flex; align-items: center; justify-content: space-between;
+            position: sticky; top: 0; z-index: 100;
+            backdrop-filter: blur(16px);
+        }
+        .header h1 {
+            font-size: 1.35rem; font-weight: 800;
+            background: linear-gradient(135deg, var(--cyan), var(--blue));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            display: flex; align-items: center; gap: .55rem;
+        }
+        .header h1 .ico { -webkit-text-fill-color: initial; font-size: 1.45rem; }
+        .live { display: flex; align-items: center; gap: .4rem; font-size: .8rem; color: var(--green); font-weight: 600; }
+        .live-dot { width: 7px; height: 7px; background: var(--green); border-radius: 50%; animation: pulse 1.8s ease-in-out infinite; }
+        @keyframes pulse { 0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(34,197,94,.5)} 50%{opacity:.55;box-shadow:0 0 0 6px rgba(34,197,94,0)} }
+
+        /* ── Layout ─────────────────────────────────────────────── */
+        .container { max-width: 1380px; margin: 0 auto; padding: 1.75rem 2rem 2.5rem; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; margin-bottom: 1.5rem; }
+
+        /* ── Card ───────────────────────────────────────────────── */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.4rem 1.5rem;
+            display: flex; flex-direction: column;
+            transition: border-color .2s;
+        }
+        .card:hover { border-color: rgba(59,130,246,.35); }
+
+        .card-top { display: flex; align-items: center; gap: .55rem; margin-bottom: 1rem; }
+        .card-icon { width: 36px; height: 36px; border-radius: 9px; display: grid; place-items: center; font-size: 1.1rem; flex-shrink: 0; }
+        .card-icon.cpu  { background: rgba(59,130,246,.14); }
+        .card-icon.gpu  { background: rgba(249,115,22,.14); }
+        .card-icon.mem  { background: rgba(139,92,246,.14); }
+        .card-icon.disk { background: rgba(6,182,212,.14); }
+        .card-label { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--text-dim); }
+
+        .big-num { font-size: 2.4rem; font-weight: 800; line-height: 1; margin-bottom: .15rem; }
+        .big-num.cpu  { color: var(--blue); }
+        .big-num.gpu  { color: var(--orange); }
+        .big-num.mem  { color: var(--purple); }
+        .big-num.disk { color: var(--cyan); }
+
+        .sub-text { font-size: .78rem; color: var(--text-dim); margin-bottom: .85rem; }
+
+        /* ── Progress Bar ───────────────────────────────────────── */
+        .bar-track { width: 100%; height: 6px; background: rgba(255,255,255,.06); border-radius: 50px; overflow: hidden; margin-bottom: 1rem; }
+        .bar-fill  { height: 100%; border-radius: 50px; transition: width .55s cubic-bezier(.22,1,.36,1); }
+        .bar-fill.cpu  { background: linear-gradient(90deg,#3b82f6,#60a5fa); }
+        .bar-fill.gpu  { background: linear-gradient(90deg,#f97316,#fb923c); }
+        .bar-fill.mem  { background: linear-gradient(90deg,#8b5cf6,#a78bfa); }
+        .bar-fill.disk { background: linear-gradient(90deg,#06b6d4,#67e8f9); }
+        .bar-fill.warn   { background: linear-gradient(90deg,var(--amber),#fbbf24) !important; }
+        .bar-fill.danger { background: linear-gradient(90deg,var(--rose),#fb7185) !important; }
+
+        /* ── Detail Sections inside cards ────────────────────────── */
+        .detail-section { margin-top: auto; }
+        .detail-title { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--text-dim); margin-bottom: .45rem; margin-top: .75rem; }
+
+        /* Core bars */
+        .core-row { display: flex; align-items: center; gap: .5rem; margin-bottom: .35rem; }
+        .core-label { font-size: .72rem; color: var(--text-dim); width: 52px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+        .core-track { flex: 1; height: 5px; background: rgba(255,255,255,.06); border-radius: 50px; overflow: hidden; }
+        .core-fill { height: 100%; border-radius: 50px; transition: width .5s ease; }
+        .core-fill.cpu  { background: var(--blue); }
+        .core-fill.gpu  { background: var(--orange); }
+        .core-pct  { font-size: .72rem; color: var(--text-dim); width: 38px; text-align: right; font-variant-numeric: tabular-nums; }
+
+        /* Stat rows */
+        .stat-row { display: flex; justify-content: space-between; padding: .3rem 0; font-size: .78rem; }
+        .stat-row .lbl { color: var(--text-dim); }
+        .stat-row .val { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+        .divider { border: none; border-top: 1px solid var(--border); margin: .5rem 0; }
+
+        /* ── Temp badge ─────────────────────────────────────────── */
+        .temp-badge { display: inline-flex; align-items: center; gap: .3rem; background: rgba(255,255,255,.05); padding: .2rem .55rem; border-radius: 6px; font-size: .75rem; font-weight: 600; }
+        .temp-badge.cool { color: var(--green); }
+        .temp-badge.warm { color: var(--amber); }
+        .temp-badge.hot  { color: var(--rose); }
+
+        /* ── Partition bars ──────────────────────────────────────── */
+        .part-row { margin-bottom: .55rem; }
+        .part-info { display: flex; justify-content: space-between; font-size: .73rem; margin-bottom: .2rem; }
+        .part-info .dev { font-weight: 600; }
+        .part-info .pct { color: var(--text-dim); font-variant-numeric: tabular-nums; }
+
+        /* ── Process Table ──────────────────────────────────────── */
+        .proc-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.4rem 1.5rem; }
+        table { width: 100%; border-collapse: collapse; }
+        thead th { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--text-dim); text-align: left; padding: .6rem .7rem; border-bottom: 1px solid var(--border); }
+        tbody td { padding: .55rem .7rem; font-size: .82rem; border-bottom: 1px solid rgba(255,255,255,.03); }
+        tbody tr { transition: background .12s; }
+        tbody tr:hover { background: var(--bg-hover); }
+        .pid { color: var(--text-dim); font-variant-numeric: tabular-nums; }
+        .pname { font-weight: 600; }
+        .badge { display: inline-block; padding: .12rem .48rem; border-radius: 5px; font-size: .73rem; font-weight: 600; }
+        .badge-cpu { background: rgba(59,130,246,.12); color: var(--blue); }
+        .badge-mem { background: rgba(139,92,246,.12); color: var(--purple); }
+
+        /* GPU unavailable */
+        .gpu-unavail { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: .4rem; color: var(--text-dim); text-align: center; padding: 1.5rem 0; }
+        .gpu-unavail .emoji { font-size: 2rem; opacity: .45; }
+        .gpu-unavail p { font-size: .82rem; }
+
+        /* ── Footer ─────────────────────────────────────────────── */
+        .footer { text-align: center; padding: 2rem; color: var(--text-dim); font-size: .75rem; }
+
+        /* ── Responsive ─────────────────────────────────────────── */
+        @media (max-width: 1100px) { .grid-4 { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 600px) {
+            .grid-4 { grid-template-columns: 1fr; }
+            .container { padding: 1rem; }
+            .big-num { font-size: 1.8rem; }
+            .header { padding: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ── Header ───────────────────────────────────────────────── -->
+<header class="header">
+    <h1><span class="ico">☁️</span> Cloud System Monitor</h1>
+    <div class="live"><span class="live-dot"></span> Live</div>
+</header>
+
+<!-- ── Dashboard ────────────────────────────────────────────── -->
+<main class="container">
+
+    <!-- ════════ 4 Metric Boxes ════════ -->
+    <section class="grid-4">
+
+        <!-- ── CPU ──────────────────────────────────────────────── -->
+        <div class="card" id="cpu-card">
+            <div class="card-top">
+                <div class="card-icon cpu">🖥️</div>
+                <span class="card-label">CPU</span>
+            </div>
+            <div class="big-num cpu" id="cpu-pct">{{ cpu.percent }}%</div>
+            <div class="sub-text" id="cpu-sub">{{ cpu.count_physical }} Physical &bull; {{ cpu.count_logical }} Logical cores</div>
+            <div class="bar-track"><div class="bar-fill cpu" id="cpu-bar" style="width:{{ cpu.percent }}%"></div></div>
+
+            <div class="detail-section" id="cpu-details">
+                {% if cpu.freq_current %}
+                <div class="stat-row">
+                    <span class="lbl">Frequency</span>
+                    <span class="val">{{ cpu.freq_current|int }} MHz</span>
+                </div>
+                {% endif %}
+                {% if cpu.freq_max %}
+                <div class="stat-row">
+                    <span class="lbl">Max Freq</span>
+                    <span class="val">{{ cpu.freq_max|int }} MHz</span>
+                </div>
+                {% endif %}
+
+                <!-- Temperatures -->
+                {% if cpu.temperatures %}
+                <div class="detail-title">Temperatures</div>
+                {% for chip, sensors in cpu.temperatures.items() %}
+                    {% for s in sensors %}
+                    <div class="stat-row">
+                        <span class="lbl">{{ s.label }}</span>
+                        <span class="temp-badge {{ 'cool' if s.current < 60 else ('warm' if s.current < 80 else 'hot') }}">🌡️ {{ s.current }}°C</span>
+                    </div>
+                    {% endfor %}
+                {% endfor %}
+                {% endif %}
+
+                <!-- Per-core -->
+                <div class="detail-title">Per-Core Usage</div>
+                {% for pct in cpu.per_core_percent %}
+                <div class="core-row">
+                    <span class="core-label">Core {{ loop.index0 }}</span>
+                    <div class="core-track"><div class="core-fill cpu" style="width:{{ pct }}%"></div></div>
+                    <span class="core-pct">{{ pct }}%</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- ── GPU ──────────────────────────────────────────────── -->
+        <div class="card" id="gpu-card">
+            <div class="card-top">
+                <div class="card-icon gpu">🎮</div>
+                <span class="card-label">GPU</span>
+            </div>
+
+            {% if gpu.available and gpu.gpus|length > 0 %}
+                {% set g = gpu.gpus[0] %}
+                <div class="big-num gpu" id="gpu-pct">{{ g.load_percent }}%</div>
+                <div class="sub-text" id="gpu-name">{{ g.name }}</div>
+                <div class="bar-track"><div class="bar-fill gpu" id="gpu-bar" style="width:{{ g.load_percent }}%"></div></div>
+
+                <div class="detail-section" id="gpu-details">
+                    <div class="stat-row">
+                        <span class="lbl">VRAM Used</span>
+                        <span class="val">{{ g.memory_used_mb|int }} / {{ g.memory_total_mb|int }} MB</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="lbl">VRAM Usage</span>
+                        <span class="val">{{ g.memory_percent }}%</span>
+                    </div>
+                    {% if g.temperature is not none %}
+                    <div class="stat-row">
+                        <span class="lbl">Temperature</span>
+                        <span class="temp-badge {{ 'cool' if g.temperature < 60 else ('warm' if g.temperature < 80 else 'hot') }}">🌡️ {{ g.temperature }}°C</span>
+                    </div>
+                    {% endif %}
+                    {% if g.driver %}
+                    <div class="stat-row">
+                        <span class="lbl">Driver</span>
+                        <span class="val">{{ g.driver }}</span>
+                    </div>
+                    {% endif %}
+
+                    <!-- VRAM bar -->
+                    <div class="detail-title">VRAM Usage</div>
+                    <div class="core-row">
+                        <span class="core-label">VRAM</span>
+                        <div class="core-track"><div class="core-fill gpu" style="width:{{ g.memory_percent }}%"></div></div>
+                        <span class="core-pct">{{ g.memory_percent }}%</span>
+                    </div>
+
+                    <!-- Additional GPUs -->
+                    {% if gpu.gpus|length > 1 %}
+                    <div class="detail-title">Additional GPUs</div>
+                    {% for gx in gpu.gpus[1:] %}
+                    <div class="core-row">
+                        <span class="core-label">GPU {{ gx.id }}</span>
+                        <div class="core-track"><div class="core-fill gpu" style="width:{{ gx.load_percent }}%"></div></div>
+                        <span class="core-pct">{{ gx.load_percent }}%</span>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+            {% else %}
+                <div class="gpu-unavail">
+                    <span class="emoji">🚫</span>
+                    <p>No NVIDIA GPU detected</p>
+                    <p style="font-size:.72rem;">GPU monitoring requires an NVIDIA GPU with drivers installed.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- ── MEMORY ───────────────────────────────────────────── -->
+        <div class="card" id="mem-card">
+            <div class="card-top">
+                <div class="card-icon mem">🧠</div>
+                <span class="card-label">Memory</span>
+            </div>
+            <div class="big-num mem" id="mem-pct">{{ memory.percent }}%</div>
+            <div class="sub-text" id="mem-sub">{{ memory.used_gb }} / {{ memory.total_gb }} GB</div>
+            <div class="bar-track"><div class="bar-fill mem" id="mem-bar" style="width:{{ memory.percent }}%"></div></div>
+
+            <div class="detail-section" id="mem-details">
+                <div class="stat-row">
+                    <span class="lbl">Total</span>
+                    <span class="val">{{ memory.total_gb }} GB</span>
+                </div>
+                <div class="stat-row">
+                    <span class="lbl">Used</span>
+                    <span class="val">{{ memory.used_gb }} GB</span>
+                </div>
+                <div class="stat-row">
+                    <span class="lbl">Available</span>
+                    <span class="val">{{ memory.available_gb }} GB</span>
+                </div>
+                {% if memory.cached_gb is not none %}
+                <div class="stat-row">
+                    <span class="lbl">Cached</span>
+                    <span class="val">{{ memory.cached_gb }} GB</span>
+                </div>
+                {% endif %}
+                {% if memory.buffers_gb is not none %}
+                <div class="stat-row">
+                    <span class="lbl">Buffers</span>
+                    <span class="val">{{ memory.buffers_gb }} GB</span>
+                </div>
+                {% endif %}
+
+                <hr class="divider">
+                <div class="detail-title">Swap</div>
+                <div class="stat-row">
+                    <span class="lbl">Swap Used</span>
+                    <span class="val">{{ memory.swap_used_gb }} / {{ memory.swap_total_gb }} GB</span>
+                </div>
+                <div class="core-row">
+                    <span class="core-label">Swap</span>
+                    <div class="core-track"><div class="core-fill mem" style="width:{{ memory.swap_percent }}%"></div></div>
+                    <span class="core-pct">{{ memory.swap_percent }}%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── DISK ─────────────────────────────────────────────── -->
+        <div class="card" id="disk-card">
+            <div class="card-top">
+                <div class="card-icon disk">💾</div>
+                <span class="card-label">Disk</span>
+            </div>
+            <div class="big-num disk" id="disk-pct">{{ disk.percent }}%</div>
+            <div class="sub-text" id="disk-sub">{{ disk.used_gb }} / {{ disk.total_gb }} GB</div>
+            <div class="bar-track"><div class="bar-fill disk" id="disk-bar" style="width:{{ disk.percent }}%"></div></div>
+
+            <div class="detail-section" id="disk-details">
+                <!-- Partitions -->
+                <div class="detail-title">Partitions</div>
+                {% for p in disk.partitions %}
+                <div class="part-row">
+                    <div class="part-info">
+                        <span class="dev">{{ p.device }} <span style="color:var(--text-dim);font-weight:400;">({{ p.fstype }})</span></span>
+                        <span class="pct">{{ p.percent }}%</span>
+                    </div>
+                    <div class="core-track"><div class="core-fill disk" style="width:{{ p.percent }}%"></div></div>
+                    <div style="font-size:.7rem;color:var(--text-dim);margin-top:.15rem;">{{ p.used_gb }} / {{ p.total_gb }} GB &bull; {{ p.free_gb }} GB free</div>
+                </div>
+                {% endfor %}
+
+                {% if disk.io %}
+                <hr class="divider">
+                <div class="detail-title">I/O Totals</div>
+                <div class="stat-row">
+                    <span class="lbl">Read</span>
+                    <span class="val">{{ disk.io.read_gb }} GB</span>
+                </div>
+                <div class="stat-row">
+                    <span class="lbl">Written</span>
+                    <span class="val">{{ disk.io.write_gb }} GB</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+    </section>
+
+    <!-- ════════ Process Table ════════ -->
+    <section class="proc-card">
+        <div class="card-top">
+            <div class="card-icon cpu">⚙️</div>
+            <span class="card-label">Top Processes</span>
+        </div>
+        <table>
+            <thead><tr><th>PID</th><th>Process</th><th>CPU %</th><th>Memory %</th></tr></thead>
+            <tbody id="proc-tbody">
+                {% for proc in processes %}
+                <tr>
+                    <td class="pid">{{ proc.pid }}</td>
+                    <td class="pname">{{ proc.name }}</td>
+                    <td><span class="badge badge-cpu">{{ proc.cpu_percent }}%</span></td>
+                    <td><span class="badge badge-mem">{{ proc.memory_percent }}%</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+</main>
+
+<footer class="footer">Cloud System Monitor &copy; 2026 — DevOps Monitoring Dashboard</footer>
+
+<!-- ── Auto-refresh ─────────────────────────────────────────── -->
+<script>
+function barClass(el, pct) {
+    el.classList.remove('warn','danger');
+    if (pct >= 90) el.classList.add('danger');
+    else if (pct >= 70) el.classList.add('warn');
+}
+
+function tempClass(t) { return t < 60 ? 'cool' : t < 80 ? 'warm' : 'hot'; }
+
+async function refresh() {
+    try {
+        const d = await (await fetch('/api/metrics')).json();
+
+        /* ── CPU ── */
+        const cp = d.cpu.percent;
+        document.getElementById('cpu-pct').textContent = cp + '%';
+        const cpuBar = document.getElementById('cpu-bar');
+        cpuBar.style.width = cp + '%'; barClass(cpuBar, cp);
+        document.getElementById('cpu-sub').textContent =
+            d.cpu.count_physical + ' Physical \u2022 ' + d.cpu.count_logical + ' Logical cores';
+
+        // rebuild cpu details
+        let cpuHtml = '';
+        if (d.cpu.freq_current) cpuHtml += `<div class="stat-row"><span class="lbl">Frequency</span><span class="val">${Math.round(d.cpu.freq_current)} MHz</span></div>`;
+        if (d.cpu.freq_max) cpuHtml += `<div class="stat-row"><span class="lbl">Max Freq</span><span class="val">${Math.round(d.cpu.freq_max)} MHz</span></div>`;
+
+        if (d.cpu.temperatures && Object.keys(d.cpu.temperatures).length) {
+            cpuHtml += '<div class="detail-title">Temperatures</div>';
+            for (const [chip, sensors] of Object.entries(d.cpu.temperatures)) {
+                sensors.forEach(s => {
+                    cpuHtml += `<div class="stat-row"><span class="lbl">${s.label}</span><span class="temp-badge ${tempClass(s.current)}">🌡️ ${s.current}°C</span></div>`;
+                });
+            }
+        }
+
+        cpuHtml += '<div class="detail-title">Per-Core Usage</div>';
+        d.cpu.per_core_percent.forEach((p, i) => {
+            cpuHtml += `<div class="core-row"><span class="core-label">Core ${i}</span><div class="core-track"><div class="core-fill cpu" style="width:${p}%"></div></div><span class="core-pct">${p}%</span></div>`;
+        });
+        document.getElementById('cpu-details').innerHTML = cpuHtml;
+
+        /* ── GPU ── */
+        if (d.gpu.available && d.gpu.gpus.length) {
+            const g = d.gpu.gpus[0];
+            const gpuPct = document.getElementById('gpu-pct');
+            if (gpuPct) { gpuPct.textContent = g.load_percent + '%'; }
+            const gpuName = document.getElementById('gpu-name');
+            if (gpuName) gpuName.textContent = g.name;
+            const gpuBar = document.getElementById('gpu-bar');
+            if (gpuBar) { gpuBar.style.width = g.load_percent + '%'; barClass(gpuBar, g.load_percent); }
+
+            let gpuHtml = '';
+            gpuHtml += `<div class="stat-row"><span class="lbl">VRAM Used</span><span class="val">${Math.round(g.memory_used_mb)} / ${Math.round(g.memory_total_mb)} MB</span></div>`;
+            gpuHtml += `<div class="stat-row"><span class="lbl">VRAM Usage</span><span class="val">${g.memory_percent}%</span></div>`;
+            if (g.temperature !== null) gpuHtml += `<div class="stat-row"><span class="lbl">Temperature</span><span class="temp-badge ${tempClass(g.temperature)}">🌡️ ${g.temperature}°C</span></div>`;
+            if (g.driver) gpuHtml += `<div class="stat-row"><span class="lbl">Driver</span><span class="val">${g.driver}</span></div>`;
+            gpuHtml += `<div class="detail-title">VRAM Usage</div>`;
+            gpuHtml += `<div class="core-row"><span class="core-label">VRAM</span><div class="core-track"><div class="core-fill gpu" style="width:${g.memory_percent}%"></div></div><span class="core-pct">${g.memory_percent}%</span></div>`;
+            if (d.gpu.gpus.length > 1) {
+                gpuHtml += '<div class="detail-title">Additional GPUs</div>';
+                d.gpu.gpus.slice(1).forEach(gx => {
+                    gpuHtml += `<div class="core-row"><span class="core-label">GPU ${gx.id}</span><div class="core-track"><div class="core-fill gpu" style="width:${gx.load_percent}%"></div></div><span class="core-pct">${gx.load_percent}%</span></div>`;
+                });
+            }
+            const gpuDet = document.getElementById('gpu-details');
+            if (gpuDet) gpuDet.innerHTML = gpuHtml;
+        }
+
+        /* ── Memory ── */
+        const mp = d.memory.percent;
+        document.getElementById('mem-pct').textContent = mp + '%';
+        document.getElementById('mem-sub').textContent = d.memory.used_gb + ' / ' + d.memory.total_gb + ' GB';
+        const memBar = document.getElementById('mem-bar');
+        memBar.style.width = mp + '%'; barClass(memBar, mp);
+
+        let memHtml = '';
+        memHtml += `<div class="stat-row"><span class="lbl">Total</span><span class="val">${d.memory.total_gb} GB</span></div>`;
+        memHtml += `<div class="stat-row"><span class="lbl">Used</span><span class="val">${d.memory.used_gb} GB</span></div>`;
+        memHtml += `<div class="stat-row"><span class="lbl">Available</span><span class="val">${d.memory.available_gb} GB</span></div>`;
+        if (d.memory.cached_gb !== null) memHtml += `<div class="stat-row"><span class="lbl">Cached</span><span class="val">${d.memory.cached_gb} GB</span></div>`;
+        if (d.memory.buffers_gb !== null) memHtml += `<div class="stat-row"><span class="lbl">Buffers</span><span class="val">${d.memory.buffers_gb} GB</span></div>`;
+        memHtml += `<hr class="divider"><div class="detail-title">Swap</div>`;
+        memHtml += `<div class="stat-row"><span class="lbl">Swap Used</span><span class="val">${d.memory.swap_used_gb} / ${d.memory.swap_total_gb} GB</span></div>`;
+        memHtml += `<div class="core-row"><span class="core-label">Swap</span><div class="core-track"><div class="core-fill mem" style="width:${d.memory.swap_percent}%"></div></div><span class="core-pct">${d.memory.swap_percent}%</span></div>`;
+        document.getElementById('mem-details').innerHTML = memHtml;
+
+        /* ── Disk ── */
+        const dp = d.disk.percent;
+        document.getElementById('disk-pct').textContent = dp + '%';
+        document.getElementById('disk-sub').textContent = d.disk.used_gb + ' / ' + d.disk.total_gb + ' GB';
+        const diskBar = document.getElementById('disk-bar');
+        diskBar.style.width = dp + '%'; barClass(diskBar, dp);
+
+        let dskHtml = '<div class="detail-title">Partitions</div>';
+        d.disk.partitions.forEach(p => {
+            dskHtml += `<div class="part-row"><div class="part-info"><span class="dev">${p.device} <span style="color:var(--text-dim);font-weight:400;">(${p.fstype})</span></span><span class="pct">${p.percent}%</span></div>`;
+            dskHtml += `<div class="core-track"><div class="core-fill disk" style="width:${p.percent}%"></div></div>`;
+            dskHtml += `<div style="font-size:.7rem;color:var(--text-dim);margin-top:.15rem;">${p.used_gb} / ${p.total_gb} GB \u2022 ${p.free_gb} GB free</div></div>`;
+        });
+        if (d.disk.io) {
+            dskHtml += '<hr class="divider"><div class="detail-title">I/O Totals</div>';
+            dskHtml += `<div class="stat-row"><span class="lbl">Read</span><span class="val">${d.disk.io.read_gb} GB</span></div>`;
+            dskHtml += `<div class="stat-row"><span class="lbl">Written</span><span class="val">${d.disk.io.write_gb} GB</span></div>`;
+        }
+        document.getElementById('disk-details').innerHTML = dskHtml;
+
+        /* ── Processes ── */
+        document.getElementById('proc-tbody').innerHTML = d.processes.map(p =>
+            `<tr><td class="pid">${p.pid}</td><td class="pname">${p.name}</td><td><span class="badge badge-cpu">${p.cpu_percent}%</span></td><td><span class="badge badge-mem">${p.memory_percent}%</span></td></tr>`
+        ).join('');
+    } catch(e) { console.error('Refresh failed:', e); }
+}
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>
