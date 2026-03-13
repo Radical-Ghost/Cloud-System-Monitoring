@@ -1,4 +1,5 @@
 # ☁️ Cloud System Monitor (Oracle Cloud Infrastructure)
+**GitHub Repository:** [Radical-Ghost/Cloud-System-Monitoring](https://github.com/Radical-Ghost/Cloud-System-Monitoring)
 
 A complete DevOps pipeline deploying a containerized system monitoring dashboard to Oracle Cloud (OCI). It tracks real-time CPU, GPU, Memory, Disk, and running processes. Built with **Python Flask**, containerized with **Docker**, secured with **Trivy**, and deployed via **Terraform** and **GitHub Actions/Jenkins** CI/CD pipelines.
 
@@ -7,46 +8,28 @@ A complete DevOps pipeline deploying a containerized system monitoring dashboard
 ## 📁 Repository Structure
 
 ```
-Cloud-System-Monitor/
-├── app.py                          # Flask backend – system metrics API
-├── requirements.txt                # Python dependencies
-├── templates/
-│   └── index.html                  # Dashboard frontend (dark theme, auto-refresh)
-├── Dockerfile                      # Multi-stage, non-root Docker build
-├── .dockerignore                   # Docker build exclusions
-├── Jenkinsfile                     # CI/CD pipeline definition (Jenkins)
-├── .github/workflows/main.yml      # CI/CD pipeline definition (GitHub Actions)
-├── trivy-scan.sh                   # Security vulnerability scan script
-├── terraform/                      # Infrastructure as Code (OCI)
-│   ├── main.tf                     # OCI VCN, subnet, security list, compute instance
-│   ├── variables.tf                # Input variables
-│   ├── outputs.tf                  # IP string outputs
-│   └── terraform.tfvars.example    # Example variable values
-├── .gitignore
-└── README.md                       # This file
+Cloud-System-Monitor/├── app.py                          # Flask backend – system metrics API├── requirements.txt                # Python dependencies├── templates/│   └── index.html                  # Dashboard frontend (dark theme, auto-refresh)├── Dockerfile                      # Multi-stage, non-root Docker build├── .dockerignore                   # Docker build exclusions├── Jenkinsfile                     # CI/CD pipeline definition (Jenkins)├── .github/workflows/main.yml      # CI/CD pipeline definition (GitHub Actions)├── trivy-scan.sh                   # Security vulnerability scan script├── terraform/                      # Infrastructure as Code (OCI)│   ├── main.tf                     # OCI VCN, subnet, security list, compute instance│   ├── variables.tf                # Input variables│   ├── outputs.tf                  # IP string outputs│   └── terraform.tfvars.example    # Example variable values├── .gitignore└── README.md                       # This file
 ```
 
 ---
 
 ## 🏗️ Cloud Infrastructure (Terraform)
 
-The `terraform/` directory contains complete Infrastructure-as-Code to deploy this application to the Oracle Cloud Infrastructure (OCI) Always Free tier. 
+The `terraform/` directory contains complete Infrastructure-as-Code to deploy this application to the Oracle Cloud Infrastructure (OCI) Always Free tier.
 
 ### Infrastructure Provisioned Automatically:
-- **Networking:** Virtual Cloud Network (VCN) (`10.0.0.0/16`) and Public Subnet.
-- **Firewall (Security List):** Restricts ingress to Port 22 (SSH) and Port 5000 (Flask Dashboard) only.
-- **Compute Instance:** Oracle Linux 8 `VM.Standard.E2.1.Micro` instance.
-- **Provisioning Script:** The instance user-data automatically installs Docker and configuring firewall rules on first boot.
+
+-   **Networking:** Virtual Cloud Network (VCN) (`10.0.0.0/16`) and Public Subnet.
+-   **Firewall (Security List):** Restricts ingress to Port 22 (SSH) and Port 5000 (Flask Dashboard) only.
+-   **Compute Instance:** Oracle Linux 8 `VM.Standard.E2.1.Micro` instance.
+-   **Provisioning Script:** The instance user-data automatically installs Docker and configuring firewall rules on first boot.
 
 ### Deploying the Infrastructure:
 
 Ensure you have OCI credentials inserted into your `terraform.tfvars` file, then initialize and deploy:
 
 ```bash
-cd terraform
-terraform init
-terraform plan
-terraform apply --auto-approve
+cd terraformterraform initterraform planterraform apply --auto-approve
 ```
 
 Upon successful deployment, Terraform will output the `instance_public_ip` which is required to access the dashboard.
@@ -58,12 +41,15 @@ Upon successful deployment, Terraform will output the `instance_public_ip` which
 This project utilizes automated CI/CD pipelines to build the Docker image, run security scans, and deploy the application to the Oracle Cloud compute instance.
 
 ### GitHub Actions (Primary Pipeline)
+
 The `.github/workflows/main.yml` file is triggered on every push to the repository. The workflow executes the following architecture:
-1. **Source Checkout:** Pulls the latest repository code.
-2. **Docker Build:** Compiles the continuous integration container.
-3. **Trivy Security Scan:** Scans the Docker image for HIGH and CRITICAL CVE vulnerabilities, outputting a JSON report artifact.
+
+1.  **Source Checkout:** Pulls the latest repository code.
+2.  **Docker Build:** Compiles the continuous integration container.
+3.  **Trivy Security Scan:** Scans the Docker image for HIGH and CRITICAL CVE vulnerabilities, outputting a JSON report artifact.
 
 ### Jenkins Integration
+
 A complete `Jenkinsfile` is also provided to achieve the exact same 6-stage operational pipeline locally in Jenkins (Build → Scan → Terraform Init → Terraform Apply → Deploy via SSH/SCP).
 
 ---
@@ -98,19 +84,13 @@ A complete `Jenkinsfile` is also provided to achieve the exact same 6-stage oper
 Generative AI was utilized to accelerate the development lifecycle and augment security best practices.
 
 **Usage Summary:**
-1. **Infrastructure as Code:** Assisted with learning and compiling the Oracle Cloud Infrastructure syntax for the `terraform/` configurations (VCNs, Subnets).
-2. **Containerization:** Helped optimize the `Dockerfile` by suggesting multi-stage builds and non-root execution practices (`appuser`).
-3. **CI/CD Automation:** Provided boilerplate syntax to structure the multi-stage `Jenkinsfile` and GitHub Actions `.yml` pipelines.
+
+1.  **Infrastructure as Code:** Assisted with learning and compiling the Oracle Cloud Infrastructure syntax for the `terraform/` configurations (VCNs, Subnets).
+2.  **Containerization:** Helped optimize the `Dockerfile` by suggesting multi-stage builds and non-root execution practices (`appuser`).
+3.  **CI/CD Automation:** Provided boilerplate syntax to structure the multi-stage `Jenkinsfile` and GitHub Actions `.yml` pipelines.
 
 ---
 
-## ☁️ Accessing the Cloud Application
 
-Once the CI/CD pipeline and Terraform deployment have completed, the dashboard will be live on the Oracle Cloud public internet.
 
-1. Obtain the **Compute Public IP Address** from the Terraform outputs.
-2. Open a web browser and navigate to: `http://<OCI_PUBLIC_IP>:5000`
-3. The dashboard will automatically refresh every 5 seconds, displaying real-time metrics of the cloud instance.
-
----
 *Created for Submission Guidelines fulfilling 100% CI/CD, Infrastructure-as-code, and Cloud Automation Requirements.*
