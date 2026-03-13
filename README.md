@@ -98,9 +98,9 @@ A complete `Jenkinsfile` is also provided to achieve the exact same 6-stage oper
 Generative AI was utilized to accelerate the development lifecycle and augment security best practices.
 
 **Usage Summary:**
-1. Assisted with `psutil` integration in `app.py` for granular system monitoring.
-2. Formatted the CSS grid layout for the `templates/index.html` frontend dashboard.
-3. Assisted with identifying initial Dockerfile security risks (such as running containers as root) and generated the `appuser` mitigation workflow.
+1. **Infrastructure as Code:** Assisted with learning and compiling the Oracle Cloud Infrastructure syntax for the `terraform/` configurations (VCNs, Subnets).
+2. **Containerization:** Helped optimize the `Dockerfile` by suggesting multi-stage builds and non-root execution practices (`appuser`).
+3. **CI/CD Automation:** Provided boilerplate syntax to structure the multi-stage `Jenkinsfile` and GitHub Actions `.yml` pipelines.
 
 ---
 
